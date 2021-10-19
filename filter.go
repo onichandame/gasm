@@ -4,41 +4,47 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/onichandame/gormquery/dto"
 	"gorm.io/gorm"
 )
 
-func getQuery(f *dto.Filter) (query string, values []interface{}) {
+type FilterInput struct {
+	Fields map[string]interface{} `json:"fields"`
+	And    []*FilterInput         `json:"and"`
+	Or     []*FilterInput         `json:"or"`
+	Not    []*FilterInput         `json:"not"`
+}
+
+func getQuery(f *FilterInput) (query string, values []interface{}) {
 	getFieldQuery := func(field string, condition interface{}) (query string, values []interface{}) {
 		if condition == nil {
 			query = fmt.Sprintf("%s AND %s IS ?", query, field)
 			values = append(values, nil)
-		} else if f, ok := condition.(dto.FieldFilter); ok {
-			if is, ok := f[dto.Is]; ok {
+		} else if f, ok := condition.(map[string]interface{}); ok {
+			if is, ok := f["is"]; ok {
 				query = fmt.Sprintf("%s AND %s IS ?", query, field)
 				values = append(values, is)
 			}
-			if eq, ok := f[dto.Eq]; ok {
+			if eq, ok := f["eq"]; ok {
 				query = fmt.Sprintf("%s AND %s = ?", query, field)
 				values = append(values, eq)
 			}
-			if gt, ok := f[dto.GT]; ok {
+			if gt, ok := f["gt"]; ok {
 				query = fmt.Sprintf("%s AND %s > ?", query, field)
 				values = append(values, gt)
 			}
-			if lt, ok := f[dto.LT]; ok {
+			if lt, ok := f["lt"]; ok {
 				query = fmt.Sprintf("%s AND %s < ?", query, field)
 				values = append(values, lt)
 			}
-			if gte, ok := f[dto.GTE]; ok {
+			if gte, ok := f["gte"]; ok {
 				query = fmt.Sprintf("%s AND %s >= ?", query, field)
 				values = append(values, gte)
 			}
-			if lte, ok := f[dto.LTE]; ok {
+			if lte, ok := f["lte"]; ok {
 				query = fmt.Sprintf("%s AND %s <= ?", query, field)
 				values = append(values, lte)
 			}
-			if in, ok := f[dto.In]; ok {
+			if in, ok := f["in"]; ok {
 				query = fmt.Sprintf("%s AND %s In ?", query, field)
 				values = append(values, in)
 			}
@@ -75,7 +81,7 @@ func getQuery(f *dto.Filter) (query string, values []interface{}) {
 	return query, values
 }
 
-func Filter(filter *dto.Filter) func(*gorm.DB) *gorm.DB {
+func Filter(filter *FilterInput) func(*gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
 		q, v := getQuery(filter)
 		return db.Where(q, v...)
