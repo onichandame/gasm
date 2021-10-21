@@ -4,7 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/onichandame/gormquery"
+	"github.com/onichandame/go-crud/core"
+	gormquery "github.com/onichandame/go-crud/gorm"
 	"github.com/stretchr/testify/assert"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -28,7 +29,7 @@ func TestFilter(t *testing.T) {
 		str := "asdf"
 		assert.Nil(t, db.Create(&Entity{Str: &str}).Error)
 		assert.Nil(t, db.Create(&Entity{Str: &[]string{"zxcv"}[0], Date: &time.Time{}}).Error)
-		var filter gormquery.FilterInput
+		var filter core.Filter
 		filter.Fields = make(map[string]interface{})
 		filter.Fields["date"] = nil
 		ents := []Entity{}
@@ -46,7 +47,7 @@ func TestFilter(t *testing.T) {
 	t.Run("is", func(t *testing.T) {
 		db := initDB(t)
 		assert.Nil(t, db.Create(&Entity{Date: &time.Time{}}).Error)
-		var filter gormquery.FilterInput
+		var filter core.Filter
 		ents := []Entity{}
 		filter.Fields = make(map[string]interface{})
 		filter.Fields["date"] = map[string]interface{}{"is": nil}
@@ -61,7 +62,7 @@ func TestFilter(t *testing.T) {
 		db := initDB(t)
 		str := "asdf"
 		assert.Nil(t, db.Create(&Entity{Str: &str}).Error)
-		var filter gormquery.FilterInput
+		var filter core.Filter
 		ents := []Entity{}
 		filter.Fields = make(map[string]interface{})
 		filter.Fields["str"] = map[string]interface{}{"eq": str}
@@ -79,7 +80,7 @@ func TestFilter(t *testing.T) {
 		assert.Nil(t, db.Create(&Entity{Int: &[]int{i + 1}[0]}).Error)
 		assert.Nil(t, db.Create(&Entity{Date: &[]time.Time{time.Now().Add(time.Hour)}[0]}).Error)
 		assert.Nil(t, db.Create(&Entity{Date: &[]time.Time{time.Now().Add(-time.Hour)}[0]}).Error)
-		var filter gormquery.FilterInput
+		var filter core.Filter
 		ents := []Entity{}
 		filter.Fields = make(map[string]interface{})
 		filter.Fields["int"] = map[string]interface{}{"gt": i}
@@ -97,7 +98,7 @@ func TestFilter(t *testing.T) {
 		assert.Nil(t, db.Create(&Entity{Int: &[]int{i + 1}[0]}).Error)
 		assert.Nil(t, db.Create(&Entity{Date: &[]time.Time{time.Now().Add(-time.Hour)}[0]}).Error)
 		assert.Nil(t, db.Create(&Entity{Date: &[]time.Time{time.Now().Add(time.Hour)}[0]}).Error)
-		var filter gormquery.FilterInput
+		var filter core.Filter
 		ents := make([]Entity, 0)
 		filter.Fields = make(map[string]interface{})
 		filter.Fields["int"] = map[string]interface{}{"lt": i}
@@ -118,7 +119,7 @@ func TestFilter(t *testing.T) {
 		assert.Nil(t, db.Create(&Entity{Date: &[]time.Time{tm.Add(time.Hour)}[0]}).Error)
 		assert.Nil(t, db.Create(&Entity{Date: &tm}).Error)
 		assert.Nil(t, db.Create(&Entity{Date: &[]time.Time{tm.Add(-time.Hour)}[0]}).Error)
-		var filter gormquery.FilterInput
+		var filter core.Filter
 		ents := make([]Entity, 0)
 		filter.Fields = make(map[string]interface{})
 		filter.Fields["int"] = map[string]interface{}{"gte": i}
@@ -139,7 +140,7 @@ func TestFilter(t *testing.T) {
 		assert.Nil(t, db.Create(&Entity{Date: &[]time.Time{tm.Add(time.Hour)}[0]}).Error)
 		assert.Nil(t, db.Create(&Entity{Date: &tm}).Error)
 		assert.Nil(t, db.Create(&Entity{Date: &[]time.Time{tm.Add(-time.Hour)}[0]}).Error)
-		var filter gormquery.FilterInput
+		var filter core.Filter
 		ents := make([]Entity, 0)
 		filter.Fields = make(map[string]interface{})
 		filter.Fields["int"] = map[string]interface{}{"lte": i}
@@ -160,7 +161,7 @@ func TestFilter(t *testing.T) {
 		for _, s := range strs {
 			assert.Nil(t, db.Create(&Entity{Str: &s}).Error)
 		}
-		var filter gormquery.FilterInput
+		var filter core.Filter
 		ents := make([]Entity, 0)
 		filter.Fields = make(map[string]interface{})
 		filter.Fields["str"] = map[string]interface{}{"in": strs}

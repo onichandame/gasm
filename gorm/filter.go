@@ -4,17 +4,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/onichandame/go-crud/core"
 	"gorm.io/gorm"
 )
 
-type FilterInput struct {
-	Fields map[string]interface{} `json:"fields"`
-	And    []*FilterInput         `json:"and"`
-	Or     []*FilterInput         `json:"or"`
-	Not    []*FilterInput         `json:"not"`
-}
-
-func getQuery(f *FilterInput) (query string, values []interface{}) {
+func getQuery(f *core.Filter) (query string, values []interface{}) {
 	getFieldQuery := func(field string, condition interface{}) (query string, values []interface{}) {
 		if condition == nil {
 			query = fmt.Sprintf("%s AND %s IS ?", query, field)
@@ -81,7 +75,7 @@ func getQuery(f *FilterInput) (query string, values []interface{}) {
 	return query, values
 }
 
-func Filter(filter *FilterInput) func(*gorm.DB) *gorm.DB {
+func Filter(filter *core.Filter) func(*gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
 		q, v := getQuery(filter)
 		return db.Where(q, v...)
