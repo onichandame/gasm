@@ -10,21 +10,20 @@ type Pagination struct {
 	Page    uint `json:"page" validate:"required,min=1"`
 	PerPage uint `json:"per_page" validate:"required,min=1"`
 }
-type Order string
 
 const (
-	ASC  Order = `ASC`
-	DESC Order = `DESC`
+	ASC  = `ASC`
+	DESC = `DESC`
 )
 
-type Sort map[string]Order
+type Sort map[string]string
 
 type Query struct {
-	Filter     `json:"filter"`
-	Pagination `json:"pagination"`
-	Sort       `json:"sort"`
-	Select     []string `json:"select"`
-	Relations  []string `json:"relations"` // selection of relations not supported
+	Filter     *Filter     `json:"filter"`
+	Pagination *Pagination `json:"pagination"`
+	Sort       Sort        `json:"sort"`
+	Select     []string    `json:"select"`
+	Relations  []string    `json:"relations"`
 }
 
 type SingleQuery struct {

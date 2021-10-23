@@ -77,7 +77,11 @@ func getQuery(f *core.Filter) (query string, values []interface{}) {
 
 func Filter(filter *core.Filter) func(*gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
-		q, v := getQuery(filter)
-		return db.Where(q, v...)
+		if filter == nil {
+			return db
+		} else {
+			q, v := getQuery(filter)
+			return db.Where(q, v...)
+		}
 	}
 }

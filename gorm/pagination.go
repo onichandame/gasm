@@ -6,8 +6,13 @@ import (
 )
 
 func Pagination(pagination *core.Pagination) func(*gorm.DB) *gorm.DB {
-	offset := (pagination.Page - 1) * pagination.PerPage
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Offset(int(offset)).Limit(int(pagination.PerPage))
+		if pagination == nil {
+			return db
+		} else {
+			offset := (pagination.Page - 1) * pagination.PerPage
+			return db.Offset(int(offset)).Limit(int(pagination.PerPage))
+		}
+
 	}
 }

@@ -1,12 +1,12 @@
 package gimquery
 
 import (
-	"context"
+	"reflect"
 
 	"github.com/gin-gonic/gin"
 	"github.com/onichandame/gim"
 	"github.com/onichandame/go-crud/core"
-	"gorm.io/gorm"
+	goutils "github.com/onichandame/go-utils"
 )
 
 func parseQuery(c *gin.Context) *core.Query {
@@ -25,12 +25,20 @@ func parseSingleQuery(c *gin.Context) *core.SingleQuery {
 	return &input
 }
 
-func getDB(app context.Context, raw interface{}) *gorm.DB {
-	if db, ok := raw.(*gorm.DB); ok {
-		return db
-	} else {
-		return app.Value(raw).(*gorm.DB)
+func parseCreateInput(c *gin.Context, dto interface{}) interface{} {
+	input := reflect.New(goutils.UnwrapType(reflect.TypeOf(dto))).Interface()
+	if err := c.ShouldBindJSON(&input); err != nil {
+		panic(err)
 	}
+	return input
+}
+
+func parseCreateManyInput(c *gin.Context, dto interface{}) interface{} {
+	input := reflect.New(reflect.SliceOf(goutils.UnwrapType(reflect.TypeOf(dto)))).Interface()
+	if err := c.ShouldBindJSON(&input); err != nil {
+		panic(err)
+	}
+	return input
 }
 
 func initModule(mod *gim.Module) {

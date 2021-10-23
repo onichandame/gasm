@@ -18,7 +18,7 @@ func (s *GORMQueryService) newEntity() interface{} {
 	return reflect.New(goutils.UnwrapType(reflect.TypeOf(s.Entity))).Interface()
 }
 func (s *GORMQueryService) newEntitySlice() interface{} {
-	return reflect.MakeSlice(goutils.UnwrapType(reflect.TypeOf(s.Entity)), 0, 0).Interface()
+	return reflect.MakeSlice(reflect.SliceOf(goutils.UnwrapType(reflect.TypeOf(s.Entity))), 0, 0).Interface()
 }
 
 func (s *GORMQueryService) FindByID(id interface{}) interface{} {
@@ -30,7 +30,7 @@ func (s *GORMQueryService) FindByID(id interface{}) interface{} {
 }
 func (s *GORMQueryService) Find(q core.Query) interface{} {
 	data := s.newEntitySlice()
-	if err := s.DB.Scopes(Pagination(&q.Pagination), Filter(&q.Filter)).Find(data).Error; err != nil {
+	if err := s.DB.Scopes(Select(q.Select), Relation(q.Relations), Pagination(q.Pagination), Filter(q.Filter), Sort(q.Sort)).Find(&data).Error; err != nil {
 		panic(err)
 	}
 	return data
@@ -43,11 +43,11 @@ func (s *GORMQueryService) CreateOne(input interface{}) interface{} {
 	if err := s.DB.Create(data).Error; err != nil {
 		panic(err)
 	}
-	return input
+	return data
 }
-func (s *GORMQueryService) CreateMany(input []interface{}) interface{} {
+func (s *GORMQueryService) CreateMany(input interface{}) interface{} {
 	data := s.newEntitySlice()
-	if err := copier.Copy(data, input); err != nil {
+	if err := copier.Copy(&data, input); err != nil {
 		panic(err)
 	}
 	if err := s.DB.Create(data).Error; err != nil {
@@ -57,12 +57,8 @@ func (s *GORMQueryService) CreateMany(input []interface{}) interface{} {
 }
 func (s *GORMQueryService) UpdateOne(id interface{}, update interface{}) interface{} {
 	data := s.newEntity()
-	if err := s.DB.First(data, id).Error; err != nil {
-		panic(err)
-	}
-	if err := copier.Copy(data, update); err != nil {
-		panic(err)
-	}
+	goutils.Assert(s.DB.First(data, id).Error)
+	goutils.Assert(s.DB.Model(data).Updates(update).Error)
 	return data
 }
 func (s *GORMQueryService) UpdateMany(filter core.Filter, update interface{}) int {

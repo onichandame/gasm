@@ -82,6 +82,77 @@ func CreateGimModule(config GimModuleConfig) *gim.Module {
 				},
 			})
 		}
+		if !config.Read.Many.Disabled {
+			importModule(mod, &config.Read.Many.Module)
+			mod := &config.Read.Many.Module
+			initModule(mod)
+			endpoint := config.Read.Many.Endpoint
+			if endpoint == "" {
+				endpoint = "list"
+			}
+			mod.Controllers = append(mod.Controllers, &gim.Controller{
+				Path: basepath,
+				Routes: []*gim.Route{
+					{
+						Endpoint: endpoint,
+						Post: func(args gim.RouteArgs) interface{} {
+							input := parseQuery(args.Ctx)
+							return config.Assembler.ConvertToDTOs(queryService.Find(*input))
+						},
+					},
+				},
+			})
+		}
+	}
+	// create
+	if !config.Create.Disabled {
+		if config.Create.Input == nil {
+			config.Create.Input = config.Output
+		}
+		importModule(mod, &config.Create.Module)
+		mod := &config.Create.Module
+		initModule(mod)
+		if !config.Create.One.Disabled {
+			importModule(mod, &config.Create.One.Module)
+			mod := &config.Create.One.Module
+			initModule(mod)
+			endpoint := config.Create.One.Endpoint
+			if endpoint == "" {
+				endpoint = "createOne"
+			}
+			mod.Controllers = append(mod.Controllers, &gim.Controller{
+				Path: basepath,
+				Routes: []*gim.Route{
+					{
+						Endpoint: endpoint,
+						Post: func(args gim.RouteArgs) interface{} {
+							input := parseCreateInput(args.Ctx, config.Create.Input)
+							return config.Assembler.ConvertToDTO(queryService.CreateOne(config.Assembler.ConvertToCreateEntity(input)))
+						},
+					},
+				},
+			})
+		}
+		if !config.Create.Many.Disabled {
+			importModule(mod, &config.Create.Many.Module)
+			mod := &config.Create.Many.Module
+			initModule(mod)
+			endpoint := config.Create.Many.Endpoint
+			if endpoint == "" {
+				endpoint = "createMany"
+			}
+			mod.Controllers = append(mod.Controllers, &gim.Controller{
+				Path: basepath,
+				Routes: []*gim.Route{
+					{
+						Endpoint: endpoint,
+						Post: func(args gim.RouteArgs) interface{} {
+							return config.Assembler.ConvertToDTOs(queryService.CreateMany(config.Assembler.ConvertToCreateEntities(parseCreateManyInput(args.Ctx, config.Create.Input))))
+						},
+					},
+				},
+			})
+		}
 	}
 	return mod
 }

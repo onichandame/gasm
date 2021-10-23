@@ -11,13 +11,12 @@ import (
 	"gorm.io/gorm"
 )
 
-type Entity struct {
-	Str  *string
-	Date *time.Time
-	Int  *int
-}
-
 func TestFilter(t *testing.T) {
+	type Entity struct {
+		Str  *string
+		Date *time.Time
+		Int  *int
+	}
 	initDB := func(t *testing.T) *gorm.DB {
 		db, err := gorm.Open(sqlite.Open(":memory:"))
 		assert.Nil(t, err)
