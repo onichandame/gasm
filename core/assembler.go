@@ -19,8 +19,6 @@ type Assembler interface {
 	ConvertToDTOs(interface{}) interface{}
 	// create input dto to create entity for consumption by orm
 	ConvertToCreateEntity(interface{}) interface{}
-	// create input dtos to create entities for consumption by orm
-	ConvertToCreateEntities(interface{}) interface{}
 	// update input dto to update entity form consumption by orm
 	ConvertToUpdateEntity(interface{}) interface{}
 }
@@ -61,7 +59,7 @@ func (a *DefaultAssembler) ConvertToQuery(q Query) Query {
 		for _, not := range in.Not {
 			parseFilter(not)
 		}
-		for tagname, _ := range in.Fields {
+		for tagname := range in.Fields {
 			if fieldname, ok := tagFieldMap[tagname]; ok {
 				in.Fields[fieldname] = in.Fields[tagname]
 				delete(in.Fields, tagname)
@@ -104,13 +102,6 @@ func (a *DefaultAssembler) ConvertToCreateEntity(dto interface{}) interface{} {
 		panic(err)
 	}
 	return ent
-}
-func (a *DefaultAssembler) ConvertToCreateEntities(dto interface{}) interface{} {
-	ents := reflect.MakeSlice(reflect.SliceOf(goutils.UnwrapType(reflect.TypeOf(a.Entity))), 0, 0).Interface()
-	if err := copier.Copy(&ents, dto); err != nil {
-		panic(err)
-	}
-	return ents
 }
 func (a *DefaultAssembler) ConvertToUpdateEntity(dto interface{}) interface{} {
 	return dto.(map[string]interface{})

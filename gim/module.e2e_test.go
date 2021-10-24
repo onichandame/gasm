@@ -9,6 +9,7 @@ import (
 
 	"github.com/onichandame/gim"
 	gimquery "github.com/onichandame/go-crud/gim"
+	gormquery "github.com/onichandame/go-crud/gorm"
 	"github.com/stretchr/testify/assert"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -30,21 +31,24 @@ func TestModule(t *testing.T) {
 			panic(err)
 		} else {
 			assert.Nil(t, db.AutoMigrate(&Entity{}))
+			queryService := gormquery.CreateGORMQueryService(db, &Entity{})
 			return gimquery.CreateGimModule(gimquery.GimModuleConfig{
-				Endpoint: "entity",
-				Entity:   &Entity{},
-				Output:   &EntityDTO{},
-				DB:       db,
+				Endpoint:     "entities",
+				QueryService: queryService,
+				Entity:       &Entity{},
+				Output:       &EntityDTO{},
 			}), db
 		}
 	}
-	newRequest := func(url string, body string) *http.Request {
+	newRequest := func(method string, url string, body string) *http.Request {
 		reader := strings.NewReader(body)
-		req, err := http.NewRequest("POST", url, reader)
+		req, err := http.NewRequest(method, url, reader)
 		if err != nil {
 			panic(err)
 		}
-		req.Header.Set("Content-Type", "application/json")
+		if method != "GET" {
+			req.Header.Set("Content-Type", "application/json")
+		}
 		return req
 	}
 	t.Run("read one", func(t *testing.T) {
@@ -54,7 +58,7 @@ func TestModule(t *testing.T) {
 			panic(err)
 		}
 		w := httptest.NewRecorder()
-		req := newRequest("/entity/get", `{"id":1}`)
+		req := newRequest("GET", "/entities/1", ``)
 		eng.ServeHTTP(w, req)
 		var res EntityDTO
 		assert.Equal(t, 200, w.Code)
@@ -75,7 +79,7 @@ func TestModule(t *testing.T) {
 		eng := app.Bootstrap()
 		t.Run("all", func(t *testing.T) {
 			w := httptest.NewRecorder()
-			req := newRequest("/entity/list", `{}`)
+			req := newRequest("GET", "/entities", ``)
 			eng.ServeHTTP(w, req)
 			var res []EntityDTO
 			assert.Equal(t, 200, w.Code)
@@ -84,7 +88,7 @@ func TestModule(t *testing.T) {
 		})
 		t.Run("filter", func(t *testing.T) {
 			w := httptest.NewRecorder()
-			req := newRequest("/entity/list", `{"filter":{"fields":{"name":"asdf"}}}`)
+			req := newRequest("GET", `/entities?filter={"fields":{"name":"asdf"}}`, ``)
 			eng.ServeHTTP(w, req)
 			var res []EntityDTO
 			assert.Equal(t, 200, w.Code)
@@ -93,7 +97,7 @@ func TestModule(t *testing.T) {
 		})
 		t.Run("pagination", func(t *testing.T) {
 			w := httptest.NewRecorder()
-			req := newRequest("/entity/list", `{"pagination":{"per_page":1,"page":1}}`)
+			req := newRequest("GET", `/entities?pagination={"perPage":1,"page":1}`, ``)
 			eng.ServeHTTP(w, req)
 			var res []EntityDTO
 			assert.Equal(t, 200, w.Code)
@@ -101,7 +105,7 @@ func TestModule(t *testing.T) {
 			assert.Len(t, res, 1)
 			first := res[0]
 			w = httptest.NewRecorder()
-			req = newRequest("/entity/list", `{"pagination":{"per_page":1,"page":2}}`)
+			req = newRequest("GET", `/entities?pagination={"perPage":1,"page":2}`, ``)
 			eng.ServeHTTP(w, req)
 			assert.Equal(t, 200, w.Code)
 			assert.Nil(t, json.Unmarshal(w.Body.Bytes(), &res))
@@ -111,7 +115,7 @@ func TestModule(t *testing.T) {
 		})
 		t.Run("sorting", func(t *testing.T) {
 			w := httptest.NewRecorder()
-			req := newRequest("/entity/list", `{"sort":{"int":"asc"}}`)
+			req := newRequest("GET", `/entities?sort={"int":"asc"}`, ``)
 			eng.ServeHTTP(w, req)
 			assert.Equal(t, 200, w.Code)
 			var res []EntityDTO
@@ -119,7 +123,7 @@ func TestModule(t *testing.T) {
 			assert.Len(t, res, 2)
 			assert.Less(t, res[0].Int, res[1].Int)
 			w = httptest.NewRecorder()
-			req = newRequest("/entity/list", `{"sort":{"int":"desc"}}`)
+			req = newRequest("GET", `/entities?sort={"int":"desc"}`, ``)
 			eng.ServeHTTP(w, req)
 			assert.Equal(t, 200, w.Code)
 			assert.Nil(t, json.Unmarshal(w.Body.Bytes(), &res))
@@ -127,10 +131,10 @@ func TestModule(t *testing.T) {
 			assert.Greater(t, res[0].Int, res[1].Int)
 		})
 	})
-	t.Run("create one", func(t *testing.T) {
+	t.Run("create", func(t *testing.T) {
 		app, db := createApp()
 		w := httptest.NewRecorder()
-		req := newRequest("/entity/createOne", `{"name":"asdf","int":1}`)
+		req := newRequest("POST", "/entities", `{"name":"asdf","int":1}`)
 		eng := app.Bootstrap()
 		eng.ServeHTTP(w, req)
 		assert.Equal(t, 200, w.Code)
@@ -141,18 +145,53 @@ func TestModule(t *testing.T) {
 		assert.Equal(t, "asdf", ent.Name)
 		assert.Equal(t, 1, ent.Int)
 	})
-	t.Run("create many", func(t *testing.T) {
+	t.Run("update one", func(t *testing.T) {
 		app, db := createApp()
+		assert.Nil(t, db.Create(&Entity{Name: "asdf"}).Error)
 		w := httptest.NewRecorder()
-		req := newRequest("/entity/createMany", `[{"name":"asdf","int":1},{"name":"zxcv","int":2}]`)
+		req := newRequest(http.MethodPut, "/entities/1", `{"name":"zxcv"}`)
 		eng := app.Bootstrap()
 		eng.ServeHTTP(w, req)
 		assert.Equal(t, 200, w.Code)
-		var res []EntityDTO
-		assert.Nil(t, json.Unmarshal(w.Body.Bytes(), &res))
-		assert.Len(t, res, 2)
-		for _, v := range res {
-			assert.Nil(t, db.First(&Entity{}, v.ID).Error)
-		}
+		var ent Entity
+		assert.Nil(t, db.First(&ent, 1).Error)
+		assert.Equal(t, "zxcv", ent.Name)
+	})
+	t.Run("update many", func(t *testing.T) {
+		app, db := createApp()
+		assert.Nil(t, db.Create([]Entity{{Name: "asdf"}, {Name: "asdf"}, {Name: "qwer"}}).Error)
+		w := httptest.NewRecorder()
+		req := newRequest(http.MethodPut, `/entities?filter={"fields":{"name":"asdf"}}`, `{"name":"zxcv"}`)
+		eng := app.Bootstrap()
+		eng.ServeHTTP(w, req)
+		assert.Equal(t, 200, w.Code)
+		var ents []Entity
+		assert.Nil(t, db.Where("name = ?", "zxcv").Find(&ents).Error)
+		assert.Equal(t, 2, len(ents))
+	})
+	t.Run("delete one", func(t *testing.T) {
+		app, db := createApp()
+		assert.Nil(t, db.Create(&Entity{Name: "asdf"}).Error)
+		w := httptest.NewRecorder()
+		req := newRequest(http.MethodDelete, `/entities/1`, ``)
+		eng := app.Bootstrap()
+		eng.ServeHTTP(w, req)
+		assert.Equal(t, 200, w.Code)
+		var count int64
+		assert.Nil(t, db.Model(&Entity{}).Count(&count).Error)
+		assert.Equal(t, 0, int(count))
+	})
+	t.Run("delete many", func(t *testing.T) {
+		app, db := createApp()
+		assert.Nil(t, db.Create([]Entity{{Name: "asdf"}, {Name: "asdf"}, {}}).Error)
+		w := httptest.NewRecorder()
+		req := newRequest(http.MethodDelete, `/entities?filter={"fields":{"name":"asdf"}}`, ``)
+		eng := app.Bootstrap()
+		eng.ServeHTTP(w, req)
+		assert.Equal(t, 200, w.Code)
+		assert.NotNil(t, db.Where("name = ?", "asdf").First(&Entity{}).Error)
+		var count int64
+		assert.Nil(t, db.Model(&Entity{}).Count(&count).Error)
+		assert.Equal(t, 1, int(count))
 	})
 }

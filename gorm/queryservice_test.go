@@ -23,15 +23,8 @@ func TestGORMQueryService(t *testing.T) {
 	}
 	t.Run("create one", func(t *testing.T) {
 		svc, db := createSvc()
-		ent := svc.CreateOne(&Entity{})
+		ent := svc.Create(&Entity{})
 		assert.Nil(t, db.First(&Entity{}, ent.(*Entity).ID).Error)
-	})
-	t.Run("create many", func(t *testing.T) {
-		svc, db := createSvc()
-		ents := svc.CreateMany([]Entity{{}, {}})
-		var count int64
-		assert.Nil(t, db.Model(&Entity{}).Count(&count).Error)
-		assert.Equal(t, int(count), len(ents.([]Entity)))
 	})
 	t.Run("read one", func(t *testing.T) {
 		svc, db := createSvc()

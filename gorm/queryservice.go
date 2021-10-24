@@ -35,19 +35,9 @@ func (s *GORMQueryService) Find(q core.Query) interface{} {
 	}
 	return data
 }
-func (s *GORMQueryService) CreateOne(input interface{}) interface{} {
+func (s *GORMQueryService) Create(input interface{}) interface{} {
 	data := s.newEntity()
 	if err := copier.Copy(data, input); err != nil {
-		panic(err)
-	}
-	if err := s.DB.Create(data).Error; err != nil {
-		panic(err)
-	}
-	return data
-}
-func (s *GORMQueryService) CreateMany(input interface{}) interface{} {
-	data := s.newEntitySlice()
-	if err := copier.Copy(&data, input); err != nil {
 		panic(err)
 	}
 	if err := s.DB.Create(data).Error; err != nil {
