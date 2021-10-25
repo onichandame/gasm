@@ -5,6 +5,7 @@ import (
 
 	"github.com/fatih/structtag"
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"github.com/onichandame/gim"
 	"github.com/onichandame/go-crud/core"
 	goutils "github.com/onichandame/go-utils"
@@ -18,12 +19,14 @@ func parseFilter(c *gin.Context) *core.Filter {
 func parseQuery(c *gin.Context) *core.Query {
 	var queryInput core.Query
 	goutils.Assert(c.ShouldBindQuery(&queryInput))
+	goutils.Assert(validator.New().Struct(&queryInput))
 	return &queryInput
 }
 
 func parseCreateInput(c *gin.Context, dto interface{}) interface{} {
 	input := reflect.New(goutils.UnwrapType(reflect.TypeOf(dto))).Interface()
 	goutils.Assert(c.ShouldBindJSON(&input))
+	goutils.Assert(validator.New().Struct(input))
 	return input
 }
 

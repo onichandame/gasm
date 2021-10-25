@@ -13,7 +13,10 @@ import (
 func TestGORMQueryService(t *testing.T) {
 	type Entity struct {
 		gorm.Model
-		Name string
+		Name     string
+		Children []*Entity `gorm:"foreignKey:ParentID"`
+		Parent   *Entity
+		ParentID uint
 	}
 	createSvc := func() (*gormquery.GORMQueryService, *gorm.DB) {
 		db, err := gorm.Open(sqlite.Open(":memory:"))
@@ -39,13 +42,24 @@ func TestGORMQueryService(t *testing.T) {
 		assert.Len(t, ents, 2)
 	})
 	t.Run("update one", func(t *testing.T) {
-		svc, db := createSvc()
-		assert.Nil(t, db.Create(&Entity{Name: "asdf"}).Error)
-		res := svc.UpdateOne(1, map[string]interface{}{"name": "zxcv"}).(*Entity)
-		assert.Equal(t, "zxcv", res.Name)
-		var ent Entity
-		assert.Nil(t, db.First(&ent).Error)
-		assert.Equal(t, res.Name, ent.Name)
+		t.Run("plain", func(t *testing.T) {
+			svc, db := createSvc()
+			assert.Nil(t, db.Create(&Entity{Name: "asdf"}).Error)
+			res := svc.UpdateOne(1, map[string]interface{}{"name": "zxcv"}).(*Entity)
+			assert.Equal(t, "zxcv", res.Name)
+			var ent Entity
+			assert.Nil(t, db.First(&ent).Error)
+			assert.Equal(t, res.Name, ent.Name)
+		})
+		t.Run("relations", func(t *testing.T) {
+			svc, db := createSvc()
+			assert.Nil(t, db.Create([]Entity{{}, {}}).Error)
+			svc.UpdateOne(2, map[string]interface{}{"parent_id": 1})
+			var ent Entity
+			assert.Nil(t, db.Preload("Children").First(&ent, 1).Error)
+			assert.Len(t, ent.Children, 1)
+			assert.Equal(t, 2, int(ent.Children[0].ID))
+		})
 	})
 	t.Run("update many", func(t *testing.T) {
 		svc, db := createSvc()
